@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 
+# Funkce pro získání dat z jedné stránky
 def scrape_article(url):
     try:
         response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -23,8 +24,9 @@ def scrape_article(url):
         print(f"Error scraping {url}: {e}")
         return None
 
-def scrape_website(base_url, article_selector, output_file):
-    articles = []
+# Funkce pro procházení a ukládání unikátních příspěvků
+def scrape_website(base_url, article_selector, output_file, seen_articles):
+    new_data_added = False  # Pro kontrolu, zda bylo přidáno nové data
     try:
         response = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"})
         response.raise_for_status()
@@ -37,13 +39,16 @@ def scrape_website(base_url, article_selector, output_file):
         for link in links:
             article_data = scrape_article(link)
             if article_data:
-                articles.append(article_data)
-                # Průběžně ukládáme data do souboru
-                with open(output_file, 'a', encoding='utf-8') as f:
-                    f.write(json.dumps(article_data) + '\n')
-                print(f"Scraped article: {article_data['Title']}")
+                # Zkontrolujeme, zda příspěvek už existuje
+                if article_data["Title"] not in seen_articles:
+                    seen_articles.add(article_data["Title"])  # Přidáme do množiny unikátních
+                    with open(output_file, 'a', encoding='utf-8') as f:
+                        f.write(json.dumps(article_data) + '\n')
+                    new_data_added = True
     except Exception as e:
         print(f"Error accessing {base_url}: {e}")
+
+    return new_data_added
 
 def main():
     BASE_URL = "https://www.novinky.cz"  # Příklad základní URL
@@ -56,14 +61,20 @@ def main():
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             f.write("")  # Prázdný soubor
 
+    seen_articles = set()  # Množina unikátních článků
     total_size = os.path.getsize(OUTPUT_FILE)  # Aktuální velikost souboru v bajtech
     print(f"Starting scraping from {BASE_URL}...")
 
+    last_logged_size = total_size  # Poslední velikost souboru, která byla zapsána do konzole
+
     while total_size < SIZE_LIMIT_GB * (1024 ** 3):  # Pokračujeme, dokud nepřesáhneme 2 GB
-        scrape_website(BASE_URL, ARTICLE_SELECTOR, OUTPUT_FILE)
-        # Aktualizace velikosti souboru
-        total_size = os.path.getsize(OUTPUT_FILE)
-        print(f"Current data size: {total_size / (1024 ** 3):.2f} GB")
+        new_data_added = scrape_website(BASE_URL, ARTICLE_SELECTOR, OUTPUT_FILE, seen_articles)
+        total_size = os.path.getsize(OUTPUT_FILE)  # Aktualizujeme velikost souboru
+
+        # Vypisujeme pouze při změně velikosti
+        if new_data_added and total_size != last_logged_size:
+            print(f"Current data size: {total_size / (1024 ** 3):.2f} GB")
+            last_logged_size = total_size
 
     print(f"Scraping completed. Total data size: {total_size / (1024 ** 3):.2f} GB")
 
