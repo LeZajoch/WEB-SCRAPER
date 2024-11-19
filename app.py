@@ -2,6 +2,15 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import os
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Flask is running!"
+
+
 
 
 # Funkce pro získání dat z jedné stránky
@@ -61,6 +70,7 @@ def scrape_website(base_url, article_selector, output_file, size_limit_gb=2):
 
 
 if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
     # Nastavení
     BASE_URL = "https://www.novinky.cz"  # Příklad základní URL
     ARTICLE_SELECTOR = "a.teaser-title"  # CSS selektor článků
