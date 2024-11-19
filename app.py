@@ -51,11 +51,12 @@ def main():
     OUTPUT_FILE = "articles.json"        # Výstupní soubor
     SIZE_LIMIT_GB = 2  # Maximální velikost dat v GB
 
-    # Smazání existujícího souboru, pokud už existuje
-    if os.path.exists(OUTPUT_FILE):
-        os.remove(OUTPUT_FILE)
+    # Ověření, zda soubor existuje, a pokud ne, vytvoření prázdného souboru
+    if not os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+            f.write("")  # Prázdný soubor
 
-    total_size = 0  # Aktuální velikost souboru v bajtech
+    total_size = os.path.getsize(OUTPUT_FILE)  # Aktuální velikost souboru v bajtech
     print(f"Starting scraping from {BASE_URL}...")
 
     while total_size < SIZE_LIMIT_GB * (1024 ** 3):  # Pokračujeme, dokud nepřesáhneme 2 GB
