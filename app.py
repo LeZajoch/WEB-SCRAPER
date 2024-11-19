@@ -1,8 +1,7 @@
-from flask import Flask, request, jsonify
 import requests
 from bs4 import BeautifulSoup
-
-app = Flask(__name__)
+import json
+import os
 
 
 # Funkce pro získání dat z jedné stránky
@@ -18,35 +17,20 @@ def scrape_article(url):
             'property': 'article:section'}) else "N/A"
         comments = soup.find('span', class_='comments-count').text.strip() if soup.find('span',
                                                                                         class_='comments-count') else "0"
-        images = len(soup.find_all('img'))  # Počet obrázků na stránce
         content = soup.find('div', class_='article-body').text.strip() if soup.find('div',
                                                                                     class_='article-body') else "N/A"
 
-        return {"Title": title, "Category": category, "Comments": comments, "Images": images, "Content": content}
+        return {"Title": title, "Category": category, "Comments": comments, "Content": content}
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Error scraping {url}: {e}")
+        return None
 
 
-# Endpoint pro získání dat z článku
-@app.route('/scrape', methods=['GET'])
-def scrape():
-    url = request.args.get('url')
-    if not url:
-        return jsonify({"error": "Missing 'url' parameter"}), 400
-    data = scrape_article(url)
-    return jsonify(data)
-
-
-# Endpoint pro procházení více článků z hlavní stránky
-@app.route('/scrape-website', methods=['GET'])
-def scrape_website():
-    base_url = request.args.get('base_url')
-    article_selector = request.args.get('selector')
-
-    if not base_url or not article_selector:
-        return jsonify({"error": "Missing 'base_url' or 'selector' parameters"}), 400
-
+# Hlavní funkce pro procházení více článků
+def scrape_website(base_url, article_selector, output_file, size_limit_gb=2):
+    total_size = 0  # Velikost dat v bajtech
     articles = []
+
     try:
         response = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"})
         response.raise_for_status()
@@ -60,11 +44,31 @@ def scrape_website():
             article_data = scrape_article(link)
             if article_data:
                 articles.append(article_data)
+                # Průběžně ukládáme data do souboru
+                with open(output_file, 'a', encoding='utf-8') as f:
+                    f.write(json.dumps(article_data) + '\n')
 
-        return jsonify(articles)
+                # Aktualizace velikosti uložených dat
+                total_size += len(json.dumps(article_data).encode('utf-8'))
+                print(f"Current data size: {total_size / (1024 ** 3):.2f} GB")
+
+                # Kontrola, zda jsme dosáhli limitu
+                if total_size >= size_limit_gb * (1024 ** 3):  # Převod GB na bajty
+                    print(f"Reached size limit of {size_limit_gb} GB. Stopping.")
+                    return
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error accessing {base_url}: {e}")
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    # Nastavení
+    BASE_URL = "https://www.novinky.cz"  # Příklad základní URL
+    ARTICLE_SELECTOR = "a.teaser-title"  # CSS selektor článků
+    OUTPUT_FILE = "articles.json"  # Výstupní soubor
+
+    # Smazání existujícího souboru, pokud už existuje
+    if os.path.exists(OUTPUT_FILE):
+        os.remove(OUTPUT_FILE)
+
+    # Spuštění crawleru
+    scrape_website(BASE_URL, ARTICLE_SELECTOR, OUTPUT_FILE)
