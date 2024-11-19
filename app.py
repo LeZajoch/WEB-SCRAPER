@@ -2,15 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import os
-from flask import Flask, request, jsonify
 
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Flask is running! Use /scrape or /scrape-website to start scraping."
-
-# Funkce pro získání dat z jedné stránky
 def scrape_article(url):
     try:
         response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -28,23 +20,11 @@ def scrape_article(url):
 
         return {"Title": title, "Category": category, "Comments": comments, "Content": content}
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Error scraping {url}: {e}")
+        return None
 
-# Endpoint pro scrapování jednoho článku
-@app.route('/scrape', methods=['GET'])
-def scrape():
-    url = request.args.get('url')
-    if not url:
-        return jsonify({"error": "Missing 'url' parameter"}), 400
-
-    result = scrape_article(url)
-    return jsonify(result)
-
-# Hlavní funkce pro procházení více článků
-def scrape_website(base_url, article_selector, output_file, size_limit_gb=2):
-    total_size = 0  # Velikost dat v bajtech
+def scrape_website(base_url, article_selector, output_file):
     articles = []
-
     try:
         response = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"})
         response.raise_for_status()
@@ -61,37 +41,30 @@ def scrape_website(base_url, article_selector, output_file, size_limit_gb=2):
                 # Průběžně ukládáme data do souboru
                 with open(output_file, 'a', encoding='utf-8') as f:
                     f.write(json.dumps(article_data) + '\n')
-
-                # Aktualizace velikosti uložených dat
-                total_size += len(json.dumps(article_data).encode('utf-8'))
-                print(f"Current data size: {total_size / (1024 ** 3):.2f} GB")
-
-                # Kontrola, zda jsme dosáhli limitu
-                if total_size >= size_limit_gb * (1024 ** 3):  # Převod GB na bajty
-                    print(f"Reached size limit of {size_limit_gb} GB. Stopping.")
-                    return
+                print(f"Scraped article: {article_data['Title']}")
     except Exception as e:
         print(f"Error accessing {base_url}: {e}")
 
-# Endpoint pro scrapování webové stránky
-@app.route('/scrape-website', methods=['GET'])
-def scrape_website_endpoint():
-    base_url = request.args.get('base_url')
-    selector = request.args.get('selector')
-    size_limit_gb = float(request.args.get('size_limit_gb', 2))  # Default 2 GB
-    output_file = "articles.json"
+def main():
+    BASE_URL = "https://www.novinky.cz"  # Příklad základní URL
+    ARTICLE_SELECTOR = "a.teaser-title"  # CSS selektor článků
+    OUTPUT_FILE = "articles.json"        # Výstupní soubor
+    SIZE_LIMIT_GB = 2  # Maximální velikost dat v GB
 
-    if not base_url or not selector:
-        return jsonify({"error": "Missing 'base_url' or 'selector' parameter"}), 400
+    # Smazání existujícího souboru, pokud už existuje
+    if os.path.exists(OUTPUT_FILE):
+        os.remove(OUTPUT_FILE)
 
-    # Smazání existujícího souboru
-    if os.path.exists(output_file):
-        os.remove(output_file)
+    total_size = 0  # Aktuální velikost souboru v bajtech
+    print(f"Starting scraping from {BASE_URL}...")
 
-    # Scrapování webu
-    scrape_website(base_url, selector, output_file, size_limit_gb)
+    while total_size < SIZE_LIMIT_GB * (1024 ** 3):  # Pokračujeme, dokud nepřesáhneme 2 GB
+        scrape_website(BASE_URL, ARTICLE_SELECTOR, OUTPUT_FILE)
+        # Aktualizace velikosti souboru
+        total_size = os.path.getsize(OUTPUT_FILE)
+        print(f"Current data size: {total_size / (1024 ** 3):.2f} GB")
 
-    return jsonify({"status": "Scraping completed", "output_file": output_file})
+    print(f"Scraping completed. Total data size: {total_size / (1024 ** 3):.2f} GB")
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    main()
