@@ -1,6 +1,8 @@
+from flask import Flask, request, jsonify
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
+
+app = Flask(__name__)
 
 
 # Funkce pro získání dat z jedné stránky
@@ -22,12 +24,28 @@ def scrape_article(url):
 
         return {"Title": title, "Category": category, "Comments": comments, "Images": images, "Content": content}
     except Exception as e:
-        print(f"Error scraping {url}: {e}")
-        return None
+        return {"error": str(e)}
 
 
-# Hlavní funkce pro procházení více článků
-def scrape_website(base_url, article_selector):
+# Endpoint pro získání dat z článku
+@app.route('/scrape', methods=['GET'])
+def scrape():
+    url = request.args.get('url')
+    if not url:
+        return jsonify({"error": "Missing 'url' parameter"}), 400
+    data = scrape_article(url)
+    return jsonify(data)
+
+
+# Endpoint pro procházení více článků z hlavní stránky
+@app.route('/scrape-website', methods=['GET'])
+def scrape_website():
+    base_url = request.args.get('base_url')
+    article_selector = request.args.get('selector')
+
+    if not base_url or not article_selector:
+        return jsonify({"error": "Missing 'base_url' or 'selector' parameters"}), 400
+
     articles = []
     try:
         response = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"})
@@ -43,15 +61,10 @@ def scrape_website(base_url, article_selector):
             if article_data:
                 articles.append(article_data)
 
-        # Uložíme výsledky
-        df = pd.DataFrame(articles)
-        df.to_csv("articles.csv", index=False, encoding="utf-8")
-        print("Data saved to articles.csv")
+        return jsonify(articles)
     except Exception as e:
-        print(f"Error accessing {base_url}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
-# Spuštění crawleru pro konkrétní web
-if __name__ == "__main__":
-    # Příklad pro novinky.cz (vyměňte za jiné weby dle potřeby)
-    scrape_website("https://www.novinky.cz", "a.teaser-title")
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
