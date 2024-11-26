@@ -55,13 +55,13 @@ def main():
         "https://www.idnes.cz/sport/formule",  # Kategorie: F1
         "https://www.idnes.cz/ekonomika"  # Kategorie: Ekonomika
     ]
-    ARTICLE_SELECTOR = "a.teaser-title"  # CSS selektor článků
-    OUTPUT_FILE = "articles.json"        # Výstupní soubor
-    SEEN_ARTICLES = set()  # Množina pro unikátní články
+    ARTICLE_SELECTOR = "a.art-link"  # Aktualizovaný CSS selektor
+    OUTPUT_FILE = "articles.json"
+    SEEN_ARTICLES = set()
 
-    # Vytvoření (nebo přepsání) souboru na začátku
+    # Vytvoření prázdného výstupního souboru
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-        f.write("")  # Prázdný soubor
+        f.write("")
 
     print("Starting scraping...")
     for base_url in BASE_URLS:
