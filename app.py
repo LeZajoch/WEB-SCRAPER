@@ -27,16 +27,16 @@ def scrape_article(url):
         return None
 
 # Funkce pro scrapování jedné stránky
-def scrape_website(base_url, article_selector, output_file, seen_articles, page_number):
+def scrape_website(base_url, article_selector, output_file, seen_articles):
     try:
-        print(f"[Page {page_number}] Fetching: {base_url}")
+        print(f"Fetching: {base_url}")
         response = requests.get(base_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
         # Najdeme odkazy na články
         links = [a['href'] for a in soup.select(article_selector) if a['href'].startswith('http')]
-        print(f"[Page {page_number}] Found {len(links)} articles.")
+        print(f"Found {len(links)} articles on {base_url}.")
 
         for link in links:
             if link not in seen_articles:
@@ -49,27 +49,27 @@ def scrape_website(base_url, article_selector, output_file, seen_articles, page_
         print(f"Error accessing {base_url}: {e}")
 
 def main():
-    BASE_URL_TEMPLATE = "https://www.novinky.cz/page={}"  # URL s číslem stránky
+    BASE_URLS = [
+        "https://www.novinky.cz",  # Hlavní stránka
+        "https://www.novinky.cz/sekce/domaci",  # Kategorie: Domácí
+        "https://www.novinky.cz/sekce/zahranicni",  # Kategorie: Zahraniční
+        "https://www.novinky.cz/sekce/ekonomika"  # Kategorie: Ekonomika
+    ]
     ARTICLE_SELECTOR = "a.teaser-title"  # CSS selektor článků
     OUTPUT_FILE = "articles.json"        # Výstupní soubor
     SEEN_ARTICLES = set()  # Množina pro unikátní články
-    MAX_PAGES = 5  # Počet stránek pro podrobné logování
 
     # Vytvoření (nebo přepsání) souboru na začátku
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write("")  # Prázdný soubor
 
     print("Starting scraping...")
-    for page_number in range(1, MAX_PAGES + 1):  # Scrapujeme 5 stránek s detailním logováním
-        scrape_website(BASE_URL_TEMPLATE.format(page_number), ARTICLE_SELECTOR, OUTPUT_FILE, SEEN_ARTICLES, page_number)
+    for base_url in BASE_URLS:
+        print(f"Scraping URL: {base_url}")
+        scrape_website(base_url, ARTICLE_SELECTOR, OUTPUT_FILE, SEEN_ARTICLES)
+        print(f"Completed scraping for {base_url}")
 
-    print("Detailed scraping of 5 pages completed. Continuing without logging every detail...")
-
-    # Pokračujeme bez detailního logování
-    page_number = MAX_PAGES + 1
-    while True:
-        scrape_website(BASE_URL_TEMPLATE.format(page_number), ARTICLE_SELECTOR, OUTPUT_FILE, SEEN_ARTICLES, page_number)
-        page_number += 1
+    print("Scraping completed.")
 
 if __name__ == "__main__":
     main()
