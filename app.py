@@ -50,10 +50,10 @@ def scrape_website(base_url, article_selector, output_file, seen_articles):
 
 def main():
     BASE_URLS = [
-        "https://www.novinky.cz",  # Hlavní stránka
-        "https://www.novinky.cz/sekce/domaci",  # Kategorie: Domácí
-        "https://www.novinky.cz/sekce/zahranicni",  # Kategorie: Zahraniční
-        "https://www.novinky.cz/sekce/ekonomika"  # Kategorie: Ekonomika
+        "https://www.idnes.cz/",  # Hlavní stránka
+        "https://www.idnes.cz/zpravy/domaci",  # Kategorie: Domácí
+        "https://www.idnes.cz/sport/formule",  # Kategorie: F1
+        "https://www.idnes.cz/ekonomika"  # Kategorie: Ekonomika
     ]
     ARTICLE_SELECTOR = "a.teaser-title"  # CSS selektor článků
     OUTPUT_FILE = "articles.json"        # Výstupní soubor
