@@ -179,3 +179,4 @@ if __name__ == "__main__":
     # Konečné shrnutí
     final_file_size_gb = get_file_size_in_gb(OUTPUT_FILE)
     print(f"Scraping completed. Total data collected: {final_file_size_gb:.2f} GB")
+#xd
